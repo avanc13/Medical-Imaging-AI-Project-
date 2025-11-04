@@ -1,0 +1,19 @@
+training_data.zip
+data/
+__pycache__/
+*.pt
+*.pth
+
+# Conda / virtual environments
+env/
+envs/
+.conda/
+.venv/
+*.env
+*/env/
+*/envs/
+*/.venv/
+*/.conda/
+
+# shared env:
+Proj_FLASH_MRI/envs/
