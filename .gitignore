@@ -4,6 +4,12 @@ __pycache__/
 *.pt
 *.pth
 
+checkpoints/
+*.pt
+*.pth
+*.zip
+*.gif
+
 # Conda / virtual environments
 env/
 envs/
@@ -17,3 +23,8 @@ envs/
 
 # shared env:
 Proj_FLASH_MRI/envs/
+
+# Jupyter auto-saves and cache
+.ipynb_checkpoints/
+.virtual_documents/
+*.ipynb_checkpoints
