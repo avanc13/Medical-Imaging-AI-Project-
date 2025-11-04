@@ -4,4 +4,4 @@ This project aims to estimate the quantitative tissue parameters (T2* and T1â€‹Ï
 1. The `models` folder contains model implementations. As of now, we have Network 1 and the least squares implemented.
 2. The `scripts` folder contains scripts for preprocessing and checking the raw data.
 3. The `dataloader` folder contains the code to load the data following the file structure of the training data.
-4. The `train` folder has 
+4. The `train` folder has the network implementations and training. As of now, we have Network 1 implemented.
