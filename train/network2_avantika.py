@@ -7,6 +7,8 @@ multi-echo input, using LS maps as targets. Also passes the
 predicted params through the FLASH forward model so we can compare
 reconstruction error with Network 1/3/4.
 
+-- this is gonna inlcude brain maskiing too
+
 To change:
     - DATA_DIR: clean vs noisy processed echoes
     - ECHO_INDICES: which echoes to use as input
@@ -76,6 +78,44 @@ def flash_forward(params: torch.Tensor, TEs: torch.Tensor) -> torch.Tensor:
     y_hat = T1rho * torch.exp(-TEs.view(1, -1, 1, 1) / T2s)
     return y_hat
 
+# same brain mask as network 1
+def build_brain_mask_2d_batch(x: torch.Tensor,
+                              percentile: float = MASK_PERCENTILE) -> torch.Tensor:
+    """
+    Build a per-slice brain mask from the first echo in the batch.
+
+    x: (B, C, H, W), already normalized echoes
+    Returns: mask of shape (B, 1, H, W) with 1 inside brain, 0 outside.
+    """
+    B, C, H, W = x.shape
+    echo1 = x[:, 0, :, :]  # (B, H, W)
+
+    masks = []
+    for b in range(B):
+        e = echo1[b].detach().cpu().numpy()
+
+        nonzero_vals = e[e > 0]
+        if nonzero_vals.size == 0:
+            masks.append(np.zeros_like(e, dtype=np.float32))
+            continue
+
+        thr = np.percentile(nonzero_vals, percentile)
+        m = e > thr
+
+        m = binary_closing(m, structure=np.ones((3, 3)))
+        m = binary_fill_holes(m)
+
+        lbl = label(m)
+        if lbl.max() > 0:
+            largest_cc = np.argmax(np.bincount(lbl.ravel()[1:])) + 1
+            m = (lbl == largest_cc)
+
+        masks.append(m.astype(np.float32))
+
+    mask_np = np.stack(masks, axis=0)  # (B, H, W)
+    mask = torch.from_numpy(mask_np).to(x.device)  # (B, H, W)
+    mask = mask.unsqueeze(1)  # (B, 1, H, W)
+    return mask  # (B, 1, H, W)
 
 # ------------------------------------------------
 # LS PARAMETER MAP LOADER
@@ -185,17 +225,6 @@ class FlashMRIDatasetSupervised(torch.utils.data.Dataset):
         slice_img   = vol[:, :, z, :]      # (H, W, N_echoes)
         slice_param = params[:, :, :, z]   # (2, H, W) physical
 
-        # # --- normalize params here ---  # <<< NEW >>>
-        # t2s   = slice_param[0]  # (H, W)
-        # t1p   = slice_param[1]  # (H, W)
-
-        # # t2s_norm = (t2s - T2S_MEAN) / T2S_STD
-        # # t1p_norm = (t1p - T1P_MEAN) / T1P_STD
-
-        # slice_param_norm = np.stack([t2s_norm, t1p_norm], axis=0)  # (2, H, W)
-
-        # x    = torch.from_numpy(slice_img).permute(2, 0, 1).float()      # (C, H, W)
-        # p_gt = torch.from_numpy(slice_param_norm).float()                # (2, H, W) normalized
         slice_param_phys = slice_param  # (2, H, W)
 
         x    = torch.from_numpy(slice_img).permute(2, 0, 1).float()
@@ -250,6 +279,10 @@ print(
 TRAIN_SUBJECTS = train_subj
 VAL_SUBJECTS = val_subj
 
+np.save("train_subjects.npy", np.array(TRAIN_SUBJECTS))
+np.save("val_subjects.npy", np.array(VAL_SUBJECTS))
+
+
 
 # ------------------------------------------------
 # DATA LOADERS
@@ -271,7 +304,17 @@ val_loader   = DataLoader(val_ds, batch_size=BATCH_SIZE,
 # MODEL / LOSS / OPTIMIZER
 # ------------------------------------------------
 model = UNet(in_channels=N_ECHOES, out_channels=N_PARAMS).to(device)
-criterion = nn.MSELoss()  # supervised loss on *normalized* parameter maps
+#criterion = nn.MSELoss()  # supervised loss on *normalized* parameter maps
+# new mased loss that only computes loss inside brain mask
+def masked_mse_params(p_pred, p_gt, mask_params):
+    """
+    p_pred, p_gt: (B, 2, H, W)
+    mask_params: (B, 2, H, W) with 1 inside brain, 0 outside
+    """
+    diff2 = (p_pred - p_gt) ** 2
+    diff2 = diff2 * mask_params
+    return diff2.sum() / (mask_params.sum() + 1e-8)
+
 optimizer = optim.Adam(model.parameters(), lr=LR)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(
     optimizer, mode="min", factor=0.5, patience=5
@@ -304,8 +347,11 @@ for epoch in range(NUM_EPOCHS):
         x    = x.to(device)
         p_gt = p_gt.to(device)  # normalized GT
 
-        p_pred = model(x)       # normalized preds
-        loss   = criterion(p_pred, p_gt)
+        brain_mask = build_brain_mask_2d_batch(x)              # (B, 1, H, W)
+        mask_params = brain_mask.expand(-1, N_PARAMS, -1, -1)  # (B, 2, H, W)
+
+        p_pred = model(x)
+        loss   = masked_mse_params(p_pred, p_gt, mask_params)
 
         optimizer.zero_grad()
         loss.backward()
@@ -334,22 +380,25 @@ for epoch in range(NUM_EPOCHS):
     with torch.no_grad():
         for x_val, p_gt_val in val_loader:
             x_val    = x_val.to(device)
-            p_gt_val = p_gt_val.to(device)      # normalized GT
+            p_gt_val = p_gt_val.to(device)
 
-            p_pred_val = model(x_val)           # normalized preds
-            loss = criterion(p_pred_val, p_gt_val)
+            brain_mask_val = build_brain_mask_2d_batch(x_val)           # (B, 1, H, W)
+            mask_params_val = brain_mask_val.expand(-1, N_PARAMS, -1, -1)  # (B, 2, H, W)
+            mask_echo_val   = brain_mask_val.expand(-1, N_ECHOES, -1, -1)  # (B, C, H, W)
+
+            p_pred_val = model(x_val)
+            loss = masked_mse_params(p_pred_val, p_gt_val, mask_params_val)
             val_loss += loss.item()
 
-            # NMSE on parameter maps in normalized space
-            val_nmse_params += nmse(p_pred_val, p_gt_val).item()
+            # NMSE on params inside brain
+            val_nmse_params += nmse(p_pred_val * mask_params_val,
+                                    p_gt_val * mask_params_val).item()
 
-            # ---- denormalize for physics model ----  # <<< NEW >>>
-            p_pred_phys = torch.empty_like(p_pred_val)
-            p_pred_phys[:, 0] = p_pred_val[:, 0] 
-            p_pred_phys[:, 1] = p_pred_val[:, 1] 
-
-            y_hat_val = flash_forward(p_pred_phys, TEs)
-            val_nmse_recon += nmse(y_hat_val, x_val).item()
+            # recon via physics model, NMSE inside brain
+            p_pred_phys = p_pred_val  # already physical units
+            y_hat_val   = flash_forward(p_pred_phys, TEs)
+            val_nmse_recon += nmse(y_hat_val * mask_echo_val,
+                                   x_val * mask_echo_val).item()
 
     val_loss /= len(val_loader)
     val_nmse_params /= len(val_loader)
@@ -392,37 +441,29 @@ with torch.no_grad():
         all_inputs = []
 
         for i in range(len(ds_subj)):
-            x_slice, _ = ds_subj[i]           # x_slice: (C, H, W), params ignored here
-            x_slice_b = x_slice.unsqueeze(0).to(device)  # (1, C, H, W)
+            x_slice, _ = ds_subj[i]
+            x_slice_b = x_slice.unsqueeze(0).to(device)
 
-            p_pred_norm = model(x_slice_b)                 # (1, 2, H, W), normalized
+            p_pred_phys = model(x_slice_b)                     # (1, 2, H, W)
+            y_hat  = flash_forward(p_pred_phys, TEs)           # (1, N_ECHOES, H, W)
 
-            # ---- denormalize before physics + saving ----  # <<< NEW >>>
-            p_pred_phys = torch.empty_like(p_pred_norm)
-            p_pred_phys[:, 0] = p_pred_norm[:, 0] 
-            p_pred_phys[:, 1] = p_pred_norm[:, 1] 
-
-            y_hat  = flash_forward(p_pred_phys, TEs)       # (1, N_ECHOES, H, W)
-
-            t2s_pred   = torch.abs(p_pred_phys[:, 0]).cpu().numpy().squeeze()   # (H, W)
-            t1rho_pred = torch.abs(p_pred_phys[:, 1]).cpu().numpy().squeeze()   # (H, W)
-            recon      = y_hat.cpu().numpy().squeeze()                           # (N_ECHOES, H, W)
-            inp        = x_slice_b.cpu().numpy().squeeze()                       # (N_ECHOES, H, W)
+            t2s_pred   = torch.abs(p_pred_phys[:, 0]).cpu().numpy().squeeze()
+            t1rho_pred = torch.abs(p_pred_phys[:, 1]).cpu().numpy().squeeze()
+            recon      = y_hat.cpu().numpy().squeeze()         # (N_ECHOES, H, W)
+            inp        = x_slice_b.cpu().numpy().squeeze()     # (N_ECHOES, H, W)
 
             all_t2s_pred.append(t2s_pred)
             all_t1rho_pred.append(t1rho_pred)
             all_recons.append(recon)
             all_inputs.append(inp)
 
-        # stack slices along z
-        t2s_vol   = np.stack(all_t2s_pred, axis=-1)          # (H, W, Z)
-        t1rho_vol = np.stack(all_t1rho_pred, axis=-1)        # (H, W, Z)
+        t2s_vol   = np.stack(all_t2s_pred, axis=-1)
+        t1rho_vol = np.stack(all_t1rho_pred, axis=-1)
 
-        recon_vol = np.stack(all_recons, axis=-1)            # (N_ECHOES, H, W, Z)
-        input_vol = np.stack(all_inputs, axis=-1)            # (N_ECHOES, H, W, Z)
-        resid_vol = np.abs(input_vol - recon_vol)            # (N_ECHOES, H, W, Z)
+        recon_vol = np.stack(all_recons, axis=-1)   # (N_ECHOES, H, W, Z)
+        input_vol = np.stack(all_inputs, axis=-1)
+        resid_vol = np.abs(input_vol - recon_vol)
 
-        # move echo dimension to last: (H, W, Z, N_ECHOES)
         recon_vol = np.transpose(recon_vol, (1, 2, 3, 0))
         input_vol = np.transpose(input_vol, (1, 2, 3, 0))
         resid_vol = np.transpose(resid_vol, (1, 2, 3, 0))
@@ -452,10 +493,10 @@ with torch.no_grad():
 # LOSS CURVE
 # ------------------------------------------------
 plt.figure(figsize=(8, 5))
-plt.plot(train_losses, label="Train Loss", linewidth=2)
-plt.plot(val_losses,   label="Validation Loss", linewidth=2)
+plt.plot(train_losses, label="Train Loss (masked)", linewidth=2)
+plt.plot(val_losses,   label="Validation Loss (masked)", linewidth=2)
 plt.xlabel("Epoch")
-plt.ylabel("MSE Loss (normalized params)")
+plt.ylabel("MSE Loss (masked params)")
 plt.title("Supervised Training (Network 2)")
 plt.legend()
 plt.grid(True)
@@ -463,5 +504,16 @@ plt.tight_layout()
 plt.savefig(os.path.join(SAVE_DIR, "loss_curve_network2.png"), dpi=150)
 plt.show()
 
-print(f"Training complete. Best val loss (normalized params): {best_val_loss:.6f}")
+print(f"Training complete. Best val loss (masked params): {best_val_loss:.6f}")
+This version trains Net2 to match LS only inside the brain, and all your reported NMSEs are also brain-only, so they’re comparable to Net1.
+
+If you want, next step is to add a plausible-LS mask on top of the brain mask (e.g. 5–200 ms for T2*, some range for T1ρ) so you never supervise on obviously broken LS voxels.
+
+
+
+
+
+
+
+
 
