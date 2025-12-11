@@ -27,6 +27,9 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 import nibabel as nib
 
+from scipy.ndimage import binary_closing, binary_fill_holes
+from skimage.measure import label
+
 from dataloaders.flash_dataset import FlashMRIDataset
 from models.avantika.unet import UNet
 
@@ -58,6 +61,9 @@ print(f"Training on {len(train_subj)} subjects, validating on {len(val_subj)} su
 TRAIN_SUBJECTS = train_subj
 VAL_SUBJECTS   = val_subj
 
+np.save("train_subjects.npy", np.array(TRAIN_SUBJECTS))
+np.save("val_subjects.npy", np.array(VAL_SUBJECTS))
+
 # ---- Echo configuration ----
 # All echoes physically present in the data
 ECHO_INDICES_ALL = [1, 2, 3, 4]
@@ -82,6 +88,8 @@ NUM_EPOCHS     = 100
 LR             = 1e-4
 SAVE_DIR       = "checkpoints_noise/checkpoints_network3_noise"
 os.makedirs(SAVE_DIR, exist_ok=True)
+
+MASK_PERCENTILE = 60.0  # same as Net1/2
 
 # Echo times (seconds) for all 4 echoes.
 TEs_all = torch.tensor([0.012, 0.028, 0.044, 0.060], device=device)
@@ -138,6 +146,54 @@ def nmse(pred, target, eps: float = 1e-8) -> torch.Tensor:
     nmse_per_sample = num / (denom + eps)
     return nmse_per_sample.mean()
 
+def build_brain_mask_2d_batch(x, percentile: float = MASK_PERCENTILE):
+    """
+    Build a per-slice brain mask from the first echo in the batch.
+
+    x: (B, N_all, H, W), normalized echoes
+    Returns: (B, 1, H, W) mask with 1 inside brain, 0 outside.
+    """
+    B, C, H, W = x.shape
+    echo1 = x[:, 0, :, :]  # (B, H, W)
+
+    masks = []
+    for b in range(B):
+        e = echo1[b].detach().cpu().numpy()
+
+        nonzero_vals = e[e > 0]
+        if nonzero_vals.size == 0:
+            masks.append(np.zeros_like(e, dtype=np.float32))
+            continue
+
+        thr = np.percentile(nonzero_vals, percentile)
+        m = e > thr
+
+        m = binary_closing(m, structure=np.ones((3, 3)))
+        m = binary_fill_holes(m)
+
+        lbl = label(m)
+        if lbl.max() > 0:
+            largest_cc = np.argmax(np.bincount(lbl.ravel()[1:])) + 1
+            m = (lbl == largest_cc)
+
+        masks.append(m.astype(np.float32))
+
+    mask_np = np.stack(masks, axis=0)  # (B, H, W)
+    mask = torch.from_numpy(mask_np).to(x.device)  # (B, H, W)
+    mask = mask.unsqueeze(1)  # (B, 1, H, W)
+    return mask
+
+
+def masked_mse_echo(y_hat, x_tgt, mask_echo):
+    """
+    y_hat, x_tgt: (B, N_target, H, W)
+    mask_echo:   (B, N_target, H, W) with 1 inside brain, 0 outside.
+    """
+    diff2 = (y_hat - x_tgt) ** 2
+    diff2 = diff2 * mask_echo
+    return diff2.sum() / (mask_echo.sum() + 1e-8)
+
+
 # ------------------------------------------------
 # DATASET / DATALOADERS
 # ------------------------------------------------
@@ -158,7 +214,7 @@ val_loader   = DataLoader(val_ds,   batch_size=BATCH_SIZE,
 # MODEL / LOSS / OPTIMIZER
 # ------------------------------------------------
 model = UNet(in_channels=N_INPUT_ECHO, out_channels=N_PARAMS).to(device)
-criterion = nn.MSELoss()
+#criterion = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=LR)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min",
                                                  factor=0.5, patience=5)
@@ -210,7 +266,12 @@ for epoch in range(NUM_EPOCHS):
             print("Pred T1rho range:       ", params_pred[:, 1].min().item(), params_pred[:, 1].max().item())
             print("y_hat range:            ", y_hat.min().item(), y_hat.max().item())
 
-        loss = criterion(y_hat, x_tgt)
+        # --- brain mask from full echoes, expanded to target channels ---
+        brain_mask   = build_brain_mask_2d_batch(x_full)                  # (B, 1, H, W)
+        mask_echo    = brain_mask.expand(-1, N_TARGET_ECHO, -1, -1)       # (B, N_target, H, W)
+
+        loss = masked_mse_echo(y_hat, x_tgt, mask_echo)
+
 
         optimizer.zero_grad()
         loss.backward()
@@ -236,8 +297,12 @@ for epoch in range(NUM_EPOCHS):
             params_val = model(x_in_val)
             y_val_hat  = flash_forward(params_val, TEs_target)
 
-            val_loss += criterion(y_val_hat, x_tgt_val).item()
-            val_nmse += nmse(y_val_hat, x_tgt_val).item()
+            brain_mask_val = build_brain_mask_2d_batch(x_full_val)                # (B,1,H,W)
+            mask_echo_val  = brain_mask_val.expand(-1, N_TARGET_ECHO, -1, -1)     # (B,N_target,H,W)
+
+            val_loss += masked_mse_echo(y_val_hat, x_tgt_val, mask_echo_val).item()
+            val_nmse += nmse(y_val_hat * mask_echo_val, x_tgt_val * mask_echo_val).item()
+
 
     val_loss /= len(val_loader)
     val_nmse /= len(val_loader)
@@ -256,15 +321,15 @@ for epoch in range(NUM_EPOCHS):
                    os.path.join(SAVE_DIR, "best_network3_unet.pth"))
 
 # ------------------------------------------------
-# OPTIONAL: EXPORT A FEW VAL SUBJECTS AS NIFTI
-# (similar to network 1, but note: we can reconstruct at ANY TEs here)
+# EXPORT A FEW VAL SUBJECTS AS NIFTI
+# (similar to network 1, but rmr: we can reconstruct at ANY TEs here)
 # ------------------------------------------------
 SAVE_NIFTI_DIR = os.path.join(SAVE_DIR, "nifti_outputs")
 os.makedirs(SAVE_NIFTI_DIR, exist_ok=True)
 
 model.eval()
 with torch.no_grad():
-    for subj in VAL_SUBJECTS[:3]:
+    for subj in VAL_SUBJECTS:
         ds = FlashMRIDataset([subj], DATA_DIR,
                              echo_indices=ECHO_INDICES_ALL,
                              mode="val")
