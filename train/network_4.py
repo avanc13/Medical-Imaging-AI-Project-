@@ -27,7 +27,8 @@ from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 import numpy as np
 import nibabel as nib
-
+from scipy.ndimage import binary_closing, binary_fill_holes
+from skimage.measure import label
 from dataloaders.flash_dataset import FlashMRIDataset
 from models.avantika.unet import UNet
 
@@ -40,7 +41,7 @@ print("Using device:", device)
 # ------------------------------------------------
 # DATA CONFIG
 # ------------------------------------------------
-DATA_DIR = "/projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/data/processed_noisy"
+DATA_DIR = "/projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/data/processed"
 
 # discover subjects
 subjects = sorted(set([
@@ -70,8 +71,9 @@ N_PARAMS   = 2   # [T2*, T1rho]
 BATCH_SIZE = 4
 NUM_EPOCHS = 100
 LR         = 1e-4
-SAVE_DIR   = "checkpoints_noise/checkpoints_network4_noise"
+SAVE_DIR   = "redoing_stuff_12_11/checkpoints_network4_with_brainmask"
 os.makedirs(SAVE_DIR, exist_ok=True)
+MASK_PERCENTILE = 60.0  # same as Net1/2
 
 # Echo times in seconds (aligned with ECHO_INDICES_ALL)
 TEs_all = torch.tensor([0.012, 0.028, 0.044, 0.060], device=device)  # (4,)

@@ -27,7 +27,7 @@ from models.avantika.unet import UNet
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-DATA_DIR = "/projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/data/processed"
+DATA_DIR = "/projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/data/processed_noisy"
 
 # get all subjects
 subjects = sorted(set([os.path.basename(f).split("_echo")[0] for f in glob.glob(os.path.join(DATA_DIR, "sub-*_echo1.npy"))]))
@@ -51,13 +51,13 @@ np.save("val_subjects.npy", np.array(VAL_SUBJECTS))
 
 
 #N_ECHOES = 4
-ECHO_INDICES = [1]   # default all 4
+ECHO_INDICES = [1,2,3,4]   # default all 4
 N_ECHOES = len(ECHO_INDICES)
 N_PARAMS = 2   # [T2*, t1p] 
 BATCH_SIZE = 4
 NUM_EPOCHS = 100
 LR = 1e-4
-SAVE_DIR = "checkpoints_1echo"
+SAVE_DIR = "redoing_stuff_12_11/checkpoints_net1_4echoes_with_brainmask_noisy"
 os.makedirs(SAVE_DIR, exist_ok=True)
 
 MASK_PERCENTILE = 60.0

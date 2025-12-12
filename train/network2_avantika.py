@@ -29,6 +29,9 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 import nibabel as nib
 
+from scipy.ndimage import binary_closing, binary_fill_holes
+from skimage.measure import label
+
 from models.avantika.unet import UNet
 
 # ------------------------------------------------
@@ -37,10 +40,10 @@ from models.avantika.unet import UNet
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # location of processed echo .npy inputs
-DATA_DIR = "/projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/data/processed"
+DATA_DIR = "/projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/data/processed_noisy"
 
 # location of the ground-truth LS maps
-PARAM_DIR = "/projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/ground_truth_maps_processed"
+PARAM_DIR = "/projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/ground_truth_maps"
 
 # Normalization constants for ground-truth parameter maps  # <<< NEW >>>
 T2S_MEAN   = 0.1175
@@ -57,7 +60,9 @@ BATCH_SIZE = 4
 NUM_EPOCHS = 100
 LR = 1e-4
 
-SAVE_DIR = "checkpoints_network2"
+MASK_PERCENTILE = 60.0  
+
+SAVE_DIR = "redoing_stuff_12_11/checkpoints_network2_allechoes_with_brainmask_noisy"
 os.makedirs(SAVE_DIR, exist_ok=True)
 
 # echo times (seconds) from metadata
@@ -133,8 +138,8 @@ def load_ls_params(subj_id):
                    index 0 -> T2*
                    index 1 -> T1rho
     """
-    t2s_path = os.path.join(PARAM_DIR, f"{subj_id}_T2star_ls.npy")
-    t1r_path = os.path.join(PARAM_DIR, f"{subj_id}_T1rho_ls.npy")
+    t2s_path = os.path.join(PARAM_DIR, f"{subj_id}_T2star.npy")
+    t1r_path = os.path.join(PARAM_DIR, f"{subj_id}_T1p.npy")
 
     if not os.path.exists(t2s_path):
         raise FileNotFoundError(f"Missing LS T2* map: {t2s_path}")
@@ -430,7 +435,7 @@ os.makedirs(SAVE_NIFTI_DIR, exist_ok=True)
 
 model.eval()
 with torch.no_grad():
-    for subj in VAL_SUBJECTS[:3]:
+    for subj in VAL_SUBJECTS:
         ds_subj = FlashMRIDatasetSupervised(
             [subj], DATA_DIR, PARAM_DIR, echo_indices=ECHO_INDICES
         )
@@ -505,11 +510,6 @@ plt.savefig(os.path.join(SAVE_DIR, "loss_curve_network2.png"), dpi=150)
 plt.show()
 
 print(f"Training complete. Best val loss (masked params): {best_val_loss:.6f}")
-This version trains Net2 to match LS only inside the brain, and all your reported NMSEs are also brain-only, so they’re comparable to Net1.
-
-If you want, next step is to add a plausible-LS mask on top of the brain mask (e.g. 5–200 ms for T2*, some range for T1ρ) so you never supervise on obviously broken LS voxels.
-
-
 
 
 

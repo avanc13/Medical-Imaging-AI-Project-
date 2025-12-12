@@ -42,7 +42,7 @@ print("Using device:", device)
 # ------------------------------------------------
 # DATA CONFIG
 # ------------------------------------------------
-DATA_DIR = "/projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/data/processed_noisy"
+DATA_DIR = "/projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/data/processed"
 
 # all subjects that have echo1
 subjects = sorted(set([
@@ -86,7 +86,7 @@ N_PARAMS       = 2   # [T2*, T1rho]
 BATCH_SIZE     = 4
 NUM_EPOCHS     = 100
 LR             = 1e-4
-SAVE_DIR       = "checkpoints_noise/checkpoints_network3_noise"
+SAVE_DIR       = "redoing_stuff_12_11/checkpoints_network3_with_brainmask"
 os.makedirs(SAVE_DIR, exist_ok=True)
 
 MASK_PERCENTILE = 60.0  # same as Net1/2
