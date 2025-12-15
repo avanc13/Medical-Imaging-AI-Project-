@@ -38,12 +38,27 @@ This project aims to estimate quantitative tissue parameters (T2* and T1​ρ) f
 - `field_bias_correction_results/` folder contains the result of removing the bias field on input MRI
 
 ---
+### Singularity Images
 
-### Singularity Image
+The prebuilt Singularity images are available in two ways:
 
-The prebuilt Singularity image is available on the BU SCC project share:  
-This will be for inference on network 1-3:  
-`/projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/containers/flash-mri-n123.sif`
+**BU SCC path (recommended on SCC):**
+
+- Networks 1–3:
+  ```
+  /projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/containers/flash-mri-n123.sif
+  ```
+- Network 4:
+  ```
+  /projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/containers/flash-mri-n4.sif
+  ```
+
+**Remote download links:**
+- Networks 1–3 container:  
+  [https://drive.google.com/file/d/1eE_8E34LhQZ3JR9l39EZ5fkAinbKBmrE/view?usp=sharing](https://drive.google.com/file/d/1eE_8E34LhQZ3JR9l39EZ5fkAinbKBmrE/view?usp=sharing)
+- Network 4 container:  
+  [https://drive.google.com/file/d/1hHBHS4RmrO9SuGnT39Ud-gZx24cM0kJ7/view?usp=sharing](https://drive.google.com/file/d/1hHBHS4RmrO9SuGnT39Ud-gZx24cM0kJ7/view?usp=sharing)
+
 
 The container includes all required code and dependencies.  
 **Pretrained model checkpoints are stored separately and must be specified explicitly.**
