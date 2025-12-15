@@ -4,7 +4,10 @@ This project aims to estimate quantitative tissue parameters (T2* and T1​ρ) f
 
 - Estimate **T2*** and **T1ρ** from multi-echo FLASH MRI.  
 - Train and evaluate multiple **neural network architectures**: supervised, unsupervised, and self-supervised.  
-- `models/` folder contains the **model architectures** (U-Net variants) for parameter-map prediction and shared building blocks.  
+- `models/` folder contains the **model architectures** (U-Net variants) for parameter-map prediction and shared building blocks.
+  - `unet_divya.py`: provided original UNet architecutre
+  - `avantika/unet.py`: modified UNet architecture used in most networks.
+  - `varsha/snr_analysis.ipynb`: analysis of SNR across echo times using adjacent time slices in volumes 
 - `scripts/` folder contains **scripts** for preprocessing, training, and evaluation:  
   - `check_corrupted.py`: This script checks all .nii.gz files in a specified MRI dataset and reports any that are corrupted or unreadable. It prints a summary of all problematic files at the end. 
   - `compute_param_metrics_vs_ls.py`: This script compares predicted T1ρ and T2* maps to least-squares (LS) maps, computing voxel-wise metrics within a brain mask and physiologic ranges, and saves side-by-side visualizations. It outputs a CSV summarizing mean absolute errors and correlations for each subject and experiment.  
