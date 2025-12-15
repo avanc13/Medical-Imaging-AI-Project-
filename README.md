@@ -35,6 +35,7 @@ This project aims to estimate quantitative tissue parameters (T2* and T1​ρ) f
     3. **Network 3**: unsupervised TE-mismatched (input echoes at some TEs, synthesize echoes at other TEs)  
     4. **Network 4**: TE-conditioned (single-echo + TE map input; learns TE-aware parameter estimation)
 - `container/` folder contains Docker/Singularity configuration for inference.
+- `field_bias_correction_results/` folder contains the result of removing the bias field on input MRI
 
 ---
 
