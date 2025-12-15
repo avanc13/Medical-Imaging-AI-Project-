@@ -17,11 +17,18 @@ This project aims to estimate quantitative tissue parameters (T2* and T1​ρ) f
   - `proj_prelim.ipynb`: preliminary inspection of raw data  
   - `flash_dataset.py`: dataset class for model training  
 - `train/` folder contains the **network implementations and training scripts**.  
-- Four networks are implemented:  
-  1. **Network 1**: self-supervised (predict parameters → synthesize echoes → reconstruction loss)  
-  2. **Network 2**: supervised-to-LS (train against least-squares parameter maps)  
-  3. **Network 3**: unsupervised TE-mismatched (input echoes at some TEs, synthesize echoes at other TEs)  
-  4. **Network 4**: TE-conditioned (single-echo + TE map input; learns TE-aware parameter estimation)  
+  -  `network_1.py`: self-supervised UNet
+  -  `network_1_redo_with_brainmask.py`: self_supervised UNet with brainmask used during training
+  -  `network2_avantika`: supervised UNet
+  -  `network_3.py`: unsupervised UNet
+  -  `network_4.py`: self-supervised with TE as input as an additional channel to the network
+  -  `network_4_film.py`: self-supervised with TE as input using FiLM, a simple addition of MLP
+  -  `network_4_bias.py`: self-supervised with TE as input as a bias in the UNet
+  -  Four networks are implemented:
+    1. **Network 1**: self-supervised (predict parameters → synthesize echoes → reconstruction loss)  
+    2. **Network 2**: supervised-to-LS (train against least-squares parameter maps)  
+    3. **Network 3**: unsupervised TE-mismatched (input echoes at some TEs, synthesize echoes at other TEs)  
+    4. **Network 4**: TE-conditioned (single-echo + TE map input; learns TE-aware parameter estimation)
 - `container/` folder contains Docker/Singularity configuration for inference.
 
 ---
