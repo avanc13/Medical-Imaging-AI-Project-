@@ -22,14 +22,14 @@ This project aims to estimate quantitative tissue parameters (T2* and T1​ρ) f
   - `proj_prelim.ipynb`: preliminary inspection of raw data  
   - `flash_dataset.py`: dataset class for model training  
 - `train/` folder contains the **network implementations and training scripts**.  
-  -  `network_1.py`: self-supervised UNet
-  -  `network_1_redo_with_brainmask.py`: self_supervised UNet with brainmask used during training
-  -  `network2_avantika`: supervised UNet
-  -  `network_3.py`: unsupervised UNet
-  -  `network_4.py`: self-supervised with TE as input as an additional channel to the network
-  -  `network_4_film.py`: self-supervised with TE as input using FiLM, a simple addition of MLP
-  -  `network_4_bias.py`: self-supervised with TE as input as a bias in the UNet
-  -  Four networks are implemented:
+  - `network_1.py`: self-supervised UNet
+  - `network_1_redo_with_brainmask.py`: self_supervised UNet with brainmask used during training
+  - `network2_avantika`: supervised UNet
+  - `network_3.py`: unsupervised UNet
+  - `network_4.py`: self-supervised with TE as input as an additional channel to the network
+  - `network_4_film.py`: self-supervised with TE as input using FiLM, a simple addition of MLP
+  - `network_4_bias.py`: self-supervised with TE as input as a bias in the UNet
+  - Four networks are implemented:
     1. **Network 1**: self-supervised (predict parameters → synthesize echoes → reconstruction loss)  
     2. **Network 2**: supervised-to-LS (train against least-squares parameter maps)  
     3. **Network 3**: unsupervised TE-mismatched (input echoes at some TEs, synthesize echoes at other TEs)  
@@ -41,19 +41,26 @@ This project aims to estimate quantitative tissue parameters (T2* and T1​ρ) f
 
 ### Singularity Image
 
-The prebuilt Singularity image is available on the BU SCC project share:
-This will be for inference on network 1-3: `/projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/containers/flash-mri-n123.sif`
+The prebuilt Singularity image is available on the BU SCC project share:  
+This will be for inference on network 1-3:  
+`/projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/containers/flash-mri-n123.sif`
+
 The container includes all required code and dependencies.  
 **Pretrained model checkpoints are stored separately and must be specified explicitly.**
-  Pretrained Checkpoints:
-  //projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/checkpoints/for_graders
-  ├── network1.pth              # Network 1: self-supervised
-  ├── best_network2_unet.pth    # Network 2: supervised-to-LS
-  └── best_network3_unet.pth    # Network 3: unsupervised (new TE reconstruction)
+
+Pretrained Checkpoints:
+
+```
+/projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/checkpoints/for_graders
+├── network1.pth              # Network 1: self-supervised
+├── best_network2_unet.pth    # Network 2: supervised-to-LS
+└── best_network3_unet.pth    # Network 3: unsupervised (new TE reconstruction)
+```
 
 **These were all trained with normalized data and all 4 echoes (excpet 3- trained with input echo 1 and 4), left out the additional variations to not overcrowd readme**
 
 Example usage: 
+
 ```bash
 cd /projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI
 
@@ -66,14 +73,17 @@ singularity exec -B $PWD:/proj container/flash-mri-n123.sif \
     --echo_indices 1 2 \
     --device cpu
 ```
-**For network 4**, below is the checkpoint for one of the implementations:
+
+**For network 4**, below is the checkpoint for one of the implementations:  
 `/projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/checkpoints/for_graders/best_network4_unet.pth`
 
 This is a trained checkpoint for adding a TE scalar as an input with an additional channel.
 
-Singularity Image:  `/projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/flash-mri-n4.sif`
+Singularity Image:  
+`/projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/flash-mri-n4.sif`
 
 Example usage of inference script:
+
 ```bash
 cd /projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI
 
