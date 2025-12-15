@@ -51,10 +51,10 @@ The container includes all required code and dependencies.
 
 Pretrained Checkpoints:
 
-/projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/checkpoints/for_graders
-├── network1.pth   # Network 1: self-supervised
-├── best_network2_unet.pth   # Network 2: supervised-to-LS
-└── best_network3_unet.pth   # Network 3: Unsupervised (new TE reoconstruct)
+//projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/checkpoints/for_graders
+├── network1.pth              # Network 1: self-supervised
+├── best_network2_unet.pth    # Network 2: supervised-to-LS
+└── best_network3_unet.pth    # Network 3: unsupervised (new TE reconstruction)
 
 **These were all trained with normalized data, all 4 echoes (excpet 3- trained with input echo 1 and 4), left out the additional variations to not overcrowd readme**
 
