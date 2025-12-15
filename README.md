@@ -3,8 +3,16 @@ This project aims to estimate the quantitative tissue parameters (T2* and T1​�
 
 1. The `models` folder contains the model architectures (U-Net variants) used across experiments. This includes the networks used for parameter-map prediction (T2*, T1ρ) and any shared building blocks.
 2. The `scripts` folder contains scripts for preprocessing data, and training all the networks discussed in our report.
-3. The `dataloader` folder contains the code to load the data following the file structure of the training data.
-4. The `train` folder has the network implementations and training. The network numbers and architecture are detailed below.
+  a. `check_corrupted.py`:
+  b. `compute_param_metrics_vs_ls.py`:
+  c. `compute_percent_plaus_ls.py`:
+  d. `compute_percent_plaus_pred.py`:
+  e. `compute_recon_metrics.py`:
+4. The `dataloader` folder contains the code to load the data following the file structure of the training data.
+  a. `proj_prelim.ipynb`: preliminary inspection of all the raw data.
+  b. `flash_dataset.py`: class to load the dataset for model training.
+5. The `train` folder has the network implementations and training. The network numbers and architecture are detailed below.
+
 We have 4 networks: 
 Network 1: self-supervised (predict params → synthesize echoes → reconstruction loss)
 
