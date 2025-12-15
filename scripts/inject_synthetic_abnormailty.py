@@ -175,9 +175,7 @@ def main():
     # ---- Generate abnormal echoes from abnormal LS maps ----
     echoes_abn = flash_forward(T1_abn, T2_abn, TEs)  # (N_echoes, H, W, Z)
 
-    # NOTE: if your processed echoes are normalized (e.g., global max scaling),
-    # you may want to apply the same normalization to `echoes_abn` here.
-    # For now, we just save raw forward-model outputs.
+#no need for norm again
 
     for e_idx in range(echoes_abn.shape[0]):
         echo_vol = echoes_abn[e_idx]  # (H, W, Z)
