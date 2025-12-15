@@ -1,29 +1,28 @@
 ## Rapid tissue parameter mapping via random FLASH synthesis
-This project aims to estimate the quantitative tissue parameters (T2* and T1​ρ) from multi-echo FLASH MRI images using a deep learning model. We aim to train and evaluate several neural network architectures in supervised, unsupervised, and self-supervised settings. 
 
-1. The `models` folder contains the model architectures (U-Net variants) used across experiments. This includes the networks used for parameter-map prediction (T2*, T1ρ) and any shared building blocks.
-2. The `scripts` folder contains scripts for preprocessing data, and training all the networks discussed in our report.
-  a. `check_corrupted.py`:
-  b. `compute_param_metrics_vs_ls.py`:
-  c. `compute_percent_plaus_ls.py`:
-  d. `compute_percent_plaus_pred.py`:
-  e. `compute_recon_metrics.py`:
-4. The `dataloader` folder contains the code to load the data following the file structure of the training data.
-  a. `proj_prelim.ipynb`: preliminary inspection of all the raw data.
-  b. `flash_dataset.py`: class to load the dataset for model training.
-5. The `train` folder has the network implementations and training. The network numbers and architecture are detailed below.
+This project aims to estimate quantitative tissue parameters (T2* and T1​ρ) from multi-echo FLASH MRI images using a deep learning model. We train and evaluate several neural network architectures in supervised, unsupervised, and self-supervised settings. Key points:  
 
-We have 4 networks: 
-Network 1: self-supervised (predict params → synthesize echoes → reconstruction loss)
-
-Network 2: supervised-to-LS (train against least-squares parameter maps)
-
-Network 3: unsupervised TE-mismatched (input echoes at some TEs, train to synthesize echoes at other TEs)
-
-Network 4: TE-conditioned (single-echo + TE map as input; learns TE-aware parameter estimation)
-
-- **`container/`**  
-  Dockerfile and container configuration for inference.
+- Estimate **T2*** and **T1ρ** from multi-echo FLASH MRI.  
+- Train and evaluate multiple **neural network architectures**: supervised, unsupervised, and self-supervised.  
+- `models/` folder contains the **model architectures** (U-Net variants) for parameter-map prediction and shared building blocks.  
+- `scripts/` folder contains **scripts** for preprocessing, training, and evaluation:  
+  - `check_corrupted.py`: This script checks all .nii.gz files in a specified MRI dataset and reports any that are corrupted or unreadable. It prints a summary of all problematic files at the end. 
+  - `compute_param_metrics_vs_ls.py`: This script compares predicted T1ρ and T2* maps to least-squares (LS) maps, computing voxel-wise metrics within a brain mask and physiologic ranges, and saves side-by-side visualizations. It outputs a CSV summarizing mean absolute errors and correlations for each subject and experiment.  
+  - `compute_percent_plaus_ls.py`: This script computes the percentage of LS T1ρ and T2* voxels that fall within physiologic ranges inside a brain mask for each subject and experiment. It outputs a CSV and prints experiment-level mean and standard deviation summaries.  
+  - `compute_percent_plaus_pred.py`: This script computes the percentage of predicted T1ρ and T2* voxels that fall within physiologic ranges inside a brain mask for each subject and experiment. It outputs a CSV and prints experiment-level mean and standard deviation summaries.  
+  - `compute_recon_metrics.py`: This script computes brain-masked reconstruction metrics (mean absolute residual and MSE) for each subject, echo, and experiment, and saves both a CSV and per-experiment bar plots. It also generates example mid-slice images showing echo1 and the mean absolute residual map.
+  - `preprocess_bias_corrected.py`: This script preprocesses multi-echo FLASH MRI by averaging 4D volumes to 3D, performing bias-field correction, normalizing intensities across echoes, and saving the processed volumes as .npy files. It also logs any corrupted files or errors encountered during processing.
+  - `preprocess.py`: This script preprocesses multi-echo FLASH MRI by averaging each 4D echo to 3D, normalizing intensities, saving them as .npy files, and logging any corrupted or unreadable files.  
+- `dataloader/` folder contains code to **load the data**:  
+  - `proj_prelim.ipynb`: preliminary inspection of raw data  
+  - `flash_dataset.py`: dataset class for model training  
+- `train/` folder contains the **network implementations and training scripts**.  
+- Four networks are implemented:  
+  1. **Network 1**: self-supervised (predict parameters → synthesize echoes → reconstruction loss)  
+  2. **Network 2**: supervised-to-LS (train against least-squares parameter maps)  
+  3. **Network 3**: unsupervised TE-mismatched (input echoes at some TEs, synthesize echoes at other TEs)  
+  4. **Network 4**: TE-conditioned (single-echo + TE map input; learns TE-aware parameter estimation)  
+- `container/` folder contains Docker/Singularity configuration for inference.
 
 ---
 
