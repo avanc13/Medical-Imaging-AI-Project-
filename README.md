@@ -52,3 +52,24 @@ singularity exec -B $PWD:/proj container/flash-mri-n123.sif \
     --checkpoint /proj/redoing_stuff_12_11/checkpoints_network3_with_brainmask/best_network3_unet.pth \
     --echo_indices 1 2 \
     --device cpu
+
+**For network 4**, below is the checkpoint for one of the implementations:
+/projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/checkpoints/for_graders/best_network4_unet.pth
+
+This is a trained checkpoint for adding a TE scalar as an input with an additional channel.
+
+Singularity Image:  /projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/flash-mri-n4.sif
+
+Example usage of inference script:
+cd /projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI
+
+singularity exec --cleanenv \
+  -B $PWD:/workspace \
+  flash-mri-n4.sif \
+  python /workspace/inference/run_inference_n4.py \
+    --data_dir /workspace/data/processed_abnormal \
+    --subject sub-19979 \
+    --checkpoint /workspace/<PATH_TO_NET4_CHECKPOINT>.pth \
+    --output /workspace/testing_inference_n4/sub-19979 \
+    --tes 0.005 0.010 0.015 0.020 \
+    --device auto
