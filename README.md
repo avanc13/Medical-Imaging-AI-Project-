@@ -42,24 +42,19 @@ This project aims to estimate quantitative tissue parameters (T2* and T1​ρ) f
 ### Singularity Image
 
 The prebuilt Singularity image is available on the BU SCC project share:
-This will be for inference on network 1-3:
-
-/projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/containers/flash-mri-n123.sif
-
+This will be for inference on network 1-3: `/projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/containers/flash-mri-n123.sif`
 The container includes all required code and dependencies.  
 **Pretrained model checkpoints are stored separately and must be specified explicitly.**
+  Pretrained Checkpoints:
+  //projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/checkpoints/for_graders
+  ├── network1.pth              # Network 1: self-supervised
+  ├── best_network2_unet.pth    # Network 2: supervised-to-LS
+  └── best_network3_unet.pth    # Network 3: unsupervised (new TE reconstruction)
 
-Pretrained Checkpoints:
-
-//projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/checkpoints/for_graders
-├── network1.pth              # Network 1: self-supervised
-├── best_network2_unet.pth    # Network 2: supervised-to-LS
-└── best_network3_unet.pth    # Network 3: unsupervised (new TE reconstruction)
-
-**These were all trained with normalized data, all 4 echoes (excpet 3- trained with input echo 1 and 4), left out the additional variations to not overcrowd readme**
+**These were all trained with normalized data and all 4 echoes (excpet 3- trained with input echo 1 and 4), left out the additional variations to not overcrowd readme**
 
 Example usage: 
-
+```bash
 cd /projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI
 
 singularity exec -B $PWD:/proj container/flash-mri-n123.sif \
@@ -70,15 +65,16 @@ singularity exec -B $PWD:/proj container/flash-mri-n123.sif \
     --checkpoint /proj/redoing_stuff_12_11/checkpoints_network3_with_brainmask/best_network3_unet.pth \
     --echo_indices 1 2 \
     --device cpu
-
+```
 **For network 4**, below is the checkpoint for one of the implementations:
-/projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/checkpoints/for_graders/best_network4_unet.pth
+`/projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/checkpoints/for_graders/best_network4_unet.pth`
 
 This is a trained checkpoint for adding a TE scalar as an input with an additional channel.
 
-Singularity Image:  /projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/flash-mri-n4.sif
+Singularity Image:  `/projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/flash-mri-n4.sif`
 
 Example usage of inference script:
+```bash
 cd /projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI
 
 singularity exec --cleanenv \
@@ -91,3 +87,4 @@ singularity exec --cleanenv \
     --output /workspace/testing_inference_n4/sub-19979 \
     --tes 0.005 0.010 0.015 0.020 \
     --device auto
+```
