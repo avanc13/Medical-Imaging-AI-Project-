@@ -12,7 +12,9 @@ This project aims to estimate quantitative tissue parameters (T2* and T1​ρ) f
   - `compute_percent_plaus_pred.py`: This script computes the percentage of predicted T1ρ and T2* voxels that fall within physiologic ranges inside a brain mask for each subject and experiment. It outputs a CSV and prints experiment-level mean and standard deviation summaries.  
   - `compute_recon_metrics.py`: This script computes brain-masked reconstruction metrics (mean absolute residual and MSE) for each subject, echo, and experiment, and saves both a CSV and per-experiment bar plots. It also generates example mid-slice images showing echo1 and the mean absolute residual map.
   - `preprocess_bias_corrected.py`: This script preprocesses multi-echo FLASH MRI by averaging 4D volumes to 3D, performing bias-field correction, normalizing intensities across echoes, and saving the processed volumes as .npy files. It also logs any corrupted files or errors encountered during processing.
-  - `preprocess.py`: This script preprocesses multi-echo FLASH MRI by averaging each 4D echo to 3D, normalizing intensities, saving them as .npy files, and logging any corrupted or unreadable files.  
+  - `preprocess.py`: This script preprocesses multi-echo FLASH MRI by averaging each 4D echo to 3D, normalizing intensities, saving them as .npy files, and logging any corrupted or unreadable files.
+  - `inject_synthetic_abnormality.py`: add a synethetic lesion to input MRI
+  - `create_gt_maps_correct.py`: LS parameter map creation script
 - `dataloader/` folder contains code to **load the data**:  
   - `proj_prelim.ipynb`: preliminary inspection of raw data  
   - `flash_dataset.py`: dataset class for model training  
