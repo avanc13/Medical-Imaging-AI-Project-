@@ -28,3 +28,27 @@ This will be for inference on network 1-3:
 
 /projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/containers/flash-mri-n123.sif
 
+The container includes all required code and dependencies.  
+**Pretrained model checkpoints are stored separately and must be specified explicitly.**
+
+Pretrained Checkpoints:
+
+/projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI/checkpoints/for_graders
+├── network1.pth   # Network 1: self-supervised
+├── best_network2_unet.pth   # Network 2: supervised-to-LS
+└── best_network3_unet.pth   # Network 3: Unsupervised (new TE reoconstruct)
+
+**These were all trained with normalized data, all 4 echoes (excpet 3- trained with input echo 1 and 4), left out the additional variations to not overcrowd readme**
+
+Example usage: 
+
+cd /projectnb/ec500kb/projects/Fall_2025_Projects/Proj_FLASH_MRI
+
+singularity exec -B $PWD:/proj container/flash-mri-n123.sif \
+  python /proj/inference/run_inference_n123.py \
+    --net 3 \
+    --input /proj/data/processed_abnormal \
+    --output /proj/testing_inference_sif \
+    --checkpoint /proj/redoing_stuff_12_11/checkpoints_network3_with_brainmask/best_network3_unet.pth \
+    --echo_indices 1 2 \
+    --device cpu
